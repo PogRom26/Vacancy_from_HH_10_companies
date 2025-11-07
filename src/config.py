@@ -1,9 +1,15 @@
-# Конфигурационные параметры
-DB_NAME = "hh_vacancies"
-DB_USER = "postgres"
-DB_PASSWORD = "your_password"
-DB_HOST = "localhost"
-DB_PORT = "5432"
+import os
+from dotenv import load_dotenv
+
+# Загружаем переменные окружения из .env файла
+load_dotenv()
+
+# Конфигурационные параметры базы данных
+DB_NAME = os.getenv("DB_NAME", "hh_vacancies")
+DB_USER = os.getenv("DB_USER", "postgres")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "your_password_here")
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("DB_PORT", "5432")
 
 # Список компаний для сбора данных
 COMPANIES = [

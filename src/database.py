@@ -181,7 +181,7 @@ class Database:
                     """, (
                         company["id"],
                         employer_info.get('name', company['name']),
-                        employer_info.get('description', '')[:1000],  # Ограничиваем длину
+                        employer_info.get('description', '')[:1000],
                         employer_info.get('site_url', ''),
                         employer_info.get('open_vacancies', 0)
                     ))
@@ -190,6 +190,8 @@ class Database:
 
                 except Exception as e:
                     print(f"❌ Ошибка при добавлении работодателя {company['name']}: {e}")
+            else:
+                print(f"⚠️ Не удалось получить данные о компании {company['name']}")
 
             # Задержка для соблюдения лимитов API
             time.sleep(0.2)
@@ -198,75 +200,92 @@ class Database:
         """Заполнение таблицы vacancies данными"""
         hh_api = HHAPI()
 
-
         for company in COMPANIES:
             # Получаем employer_id из базы данных
             self.cursor.execute("SELECT employer_id FROM employers WHERE company_id = %s", (company["id"],))
             result = self.cursor.fetchone()
 
-            if result:
-                employer_id = result[0]
-                print(f"📝 Получаем вакансии для: {company['name']}...")
-                vacancies = hh_api.get_employer_vacancies(company["id"])
+            if not result:
+                print(f"⚠️ Работодатель {company['name']} не найден в базе")
+                continue
 
-                added_count = 0
-                for vacancy in vacancies:
-                    try:
-                        # Безопасное извлечение данных с проверками
-                        vacancy_name = vacancy.get('name', 'Не указано')
-                        if not vacancy_name:
-                            vacancy_name = 'Не указано'
+            employer_id = result[0]
+            print(f"📝 Получаем вакансии для: {company['name']}...")
+            vacancies = hh_api.get_employer_vacancies(company["id"])
 
-                        # Обработка зарплаты с проверками
-                        salary_from = None
-                        salary_to = None
-                        currency = None
+            if not vacancies:
+                print(f"⚠️ Нет вакансий для {company['name']}")
+                continue
 
-                        salary_data = vacancy.get('salary')
-                        if salary_data:
-                            salary_from = salary_data.get('from')
-                            salary_to = salary_data.get('to')
-                            currency = salary_data.get('currency')
+            added_count = 0
+            error_count = 0
 
-                        # Обработка URL
-                        url = vacancy.get('alternate_url', '')
-                        if not url:
-                            url = vacancy.get('url', '')
+            for vacancy in vacancies:
+                # Пропускаем None вакансии
+                if vacancy is None:
+                    error_count += 1
+                    continue
 
-                        # Безопасное извлечение snippet данных
-                        snippet = vacancy.get('snippet') or {}
-                        requirement = snippet.get('requirement', '') or ''
-                        responsibility = snippet.get('responsibility', '') or ''
-
-                        # Ограничение длины текстовых полей
-                        vacancy_name = str(vacancy_name)[:250]
-                        requirement = str(requirement)[:1000]
-                        responsibility = str(responsibility)[:1000]
-                        url = str(url)[:255]
-
-                        self.cursor.execute("""
-                            INSERT INTO vacancies 
-                            (employer_id, vacancy_name, salary_from, salary_to, currency, url, requirement, responsibility)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                        """, (
-                            employer_id,
-                            vacancy_name,
-                            salary_from,
-                            salary_to,
-                            currency,
-                            url,
-                            requirement,
-                            responsibility
-                        ))
-                        added_count += 1
-
-                    except Exception as e:
-                        print(f"❌ Ошибка при добавлении вакансии '{vacancy.get('name', 'Unknown')}': {e}")
-                        # Для отладки можно вывести проблемную вакансию
-                        # print(f"Проблемные данные: {vacancy}")
+                try:
+                    # Пропускаем проблемные вакансии
+                    if not isinstance(vacancy, dict):
+                        error_count += 1
                         continue
 
-                print(f"✅ Добавлено {added_count} вакансий для {company['name']}")
+                    # Безопасное извлечение данных с проверками
+                    vacancy_name = vacancy.get('name', 'Не указано')
+                    if not vacancy_name:
+                        vacancy_name = 'Не указано'
+
+                    # Обработка зарплаты с проверками
+                    salary_from = None
+                    salary_to = None
+                    currency = None
+
+                    salary_data = vacancy.get('salary')
+                    if salary_data and isinstance(salary_data, dict):
+                        salary_from = salary_data.get('from')
+                        salary_to = salary_data.get('to')
+                        currency = salary_data.get('currency')
+
+                    # Обработка URL
+                    url = vacancy.get('alternate_url', '')
+                    if not url:
+                        url = vacancy.get('url', '')
+
+                    # Безопасное извлечение snippet данных
+                    snippet = vacancy.get('snippet') or {}
+                    requirement = snippet.get('requirement', '') or ''
+                    responsibility = snippet.get('responsibility', '') or ''
+
+                    # Ограничение длины текстовых полей
+                    vacancy_name = str(vacancy_name)[:250]
+                    requirement = str(requirement)[:1000]
+                    responsibility = str(responsibility)[:1000]
+                    url = str(url)[:255]
+
+                    self.cursor.execute("""
+                        INSERT INTO vacancies 
+                        (employer_id, vacancy_name, salary_from, salary_to, currency, url, requirement, responsibility)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (
+                        employer_id,
+                        vacancy_name,
+                        salary_from,
+                        salary_to,
+                        currency,
+                        url,
+                        requirement,
+                        responsibility
+                    ))
+                    added_count += 1
+
+                except Exception as e:
+                    error_count += 1
+                    print(f"❌ Ошибка при добавлении вакансии '{vacancy.get('name', 'Unknown')}': {e}")
+                    continue
+
+            print(f"✅ Добавлено {added_count} вакансий для {company['name']} (ошибок: {error_count})")
 
             # Задержка для соблюдения лимитов API
             time.sleep(0.3)

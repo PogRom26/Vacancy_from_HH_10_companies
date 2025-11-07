@@ -1,9 +1,10 @@
-import psycopg2
-from psycopg2 import OperationalError, sql
-from config import DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT
-import requests
-from config import COMPANIES
 import time
+
+import psycopg2
+import requests
+from psycopg2 import OperationalError, sql
+
+from src.config import COMPANIES, DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER
 
 
 class HHAPI:
@@ -11,7 +12,7 @@ class HHAPI:
 
     def __init__(self):
         self.base_url = "https://api.hh.ru/"
-        self.headers = {'User-Agent': 'HH-API-Client/1.0'}
+        self.headers = {"User-Agent": "HH-API-Client/1.0"}
 
     def get_employer_info(self, employer_id):
         """Получение информации о работодателе"""
@@ -27,11 +28,7 @@ class HHAPI:
     def get_employer_vacancies(self, employer_id):
         """Получение вакансий работодателя"""
         url = f"{self.base_url}vacancies"
-        params = {
-            'employer_id': employer_id,
-            'per_page': 50,
-            'page': 0
-        }
+        params = {"employer_id": employer_id, "per_page": 50, "page": 0}
         vacancies = []
 
         try:
@@ -40,30 +37,36 @@ class HHAPI:
 
                 # Проверяем статус ответа
                 if response.status_code != 200:
-                    print(f"⚠️ Ошибка API: {response.status_code} для работодателя {employer_id}")
+                    print(
+                        f"⚠️ Ошибка API: {response.status_code} для работодателя {employer_id}"
+                    )
                     break
 
                 data = response.json()
 
                 # Проверяем наличие ключа 'items'
-                if 'items' not in data:
-                    print(f"⚠️ Нет ключа 'items' в ответе для работодателя {employer_id}")
+                if "items" not in data:
+                    print(
+                        f"⚠️ Нет ключа 'items' в ответе для работодателя {employer_id}"
+                    )
                     break
 
                 # Фильтруем вакансии с None значениями
-                valid_vacancies = [v for v in data['items'] if v is not None]
+                valid_vacancies = [v for v in data["items"] if v is not None]
                 vacancies.extend(valid_vacancies)
 
                 # Проверяем, есть ли следующая страница
-                params['page'] += 1
-                if params['page'] >= data.get('pages', 0):
+                params["page"] += 1
+                if params["page"] >= data.get("pages", 0):
                     break
 
                 # Задержка для соблюдения лимитов API
                 time.sleep(0.1)
 
         except requests.RequestException as e:
-            print(f"❌ Ошибка при получении вакансий для работодателя {employer_id}: {e}")
+            print(
+                f"❌ Ошибка при получении вакансий для работодателя {employer_id}: {e}"
+            )
         except Exception as e:
             print(f"❌ Неожиданная ошибка для работодателя {employer_id}: {e}")
 
@@ -80,7 +83,7 @@ class Database:
                 user=DB_USER,
                 password=DB_PASSWORD,
                 host=DB_HOST,
-                port=DB_PORT
+                port=DB_PORT,
             )
             self.conn.autocommit = True
             self.cursor = self.conn.cursor()
@@ -93,11 +96,15 @@ class Database:
         """Создание базы данных и таблиц"""
         try:
             # Проверяем существование базы данных
-            self.cursor.execute("SELECT 1 FROM pg_catalog.pg_database WHERE datname = %s", (DB_NAME,))
+            self.cursor.execute(
+                "SELECT 1 FROM pg_catalog.pg_database WHERE datname = %s", (DB_NAME,)
+            )
             exists = self.cursor.fetchone()
 
             if not exists:
-                self.cursor.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(DB_NAME)))
+                self.cursor.execute(
+                    sql.SQL("CREATE DATABASE {}").format(sql.Identifier(DB_NAME))
+                )
                 print(f"✅ База данных {DB_NAME} создана")
             else:
                 print(f"✅ База данных {DB_NAME} уже существует")
@@ -112,7 +119,7 @@ class Database:
                 user=DB_USER,
                 password=DB_PASSWORD,
                 host=DB_HOST,
-                port=DB_PORT
+                port=DB_PORT,
             )
             self.conn.autocommit = True
             self.cursor = self.conn.cursor()
@@ -128,7 +135,8 @@ class Database:
         """Создание таблиц employers и vacancies"""
         try:
             # Таблица работодателей
-            self.cursor.execute("""
+            self.cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS employers (
                     employer_id SERIAL PRIMARY KEY,
                     company_id INTEGER UNIQUE NOT NULL,
@@ -137,10 +145,12 @@ class Database:
                     website VARCHAR(255),
                     open_vacancies INTEGER
                 )
-            """)
+            """
+            )
 
             # Таблица вакансий
-            self.cursor.execute("""
+            self.cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS vacancies (
                     vacancy_id SERIAL PRIMARY KEY,
                     employer_id INTEGER REFERENCES employers(employer_id) ON DELETE CASCADE,
@@ -152,7 +162,8 @@ class Database:
                     requirement TEXT,
                     responsibility TEXT
                 )
-            """)
+            """
+            )
 
             print("✅ Таблицы созданы успешно")
 
@@ -170,7 +181,8 @@ class Database:
 
             if employer_info:
                 try:
-                    self.cursor.execute("""
+                    self.cursor.execute(
+                        """
                         INSERT INTO employers (company_id, company_name, description, website, open_vacancies)
                         VALUES (%s, %s, %s, %s, %s)
                         ON CONFLICT (company_id) DO UPDATE SET
@@ -178,18 +190,24 @@ class Database:
                         description = EXCLUDED.description,
                         website = EXCLUDED.website,
                         open_vacancies = EXCLUDED.open_vacancies
-                    """, (
-                        company["id"],
-                        employer_info.get('name', company['name']),
-                        employer_info.get('description', '')[:1000],
-                        employer_info.get('site_url', ''),
-                        employer_info.get('open_vacancies', 0)
-                    ))
+                    """,
+                        (
+                            company["id"],
+                            employer_info.get("name", company["name"]),
+                            employer_info.get("description", "")[:1000],
+                            employer_info.get("site_url", ""),
+                            employer_info.get("open_vacancies", 0),
+                        ),
+                    )
 
-                    print(f"✅ Добавлен работодатель: {employer_info.get('name', company['name'])}")
+                    print(
+                        f"✅ Добавлен работодатель: {employer_info.get('name', company['name'])}"
+                    )
 
                 except Exception as e:
-                    print(f"❌ Ошибка при добавлении работодателя {company['name']}: {e}")
+                    print(
+                        f"❌ Ошибка при добавлении работодателя {company['name']}: {e}"
+                    )
             else:
                 print(f"⚠️ Не удалось получить данные о компании {company['name']}")
 
@@ -202,7 +220,10 @@ class Database:
 
         for company in COMPANIES:
             # Получаем employer_id из базы данных
-            self.cursor.execute("SELECT employer_id FROM employers WHERE company_id = %s", (company["id"],))
+            self.cursor.execute(
+                "SELECT employer_id FROM employers WHERE company_id = %s",
+                (company["id"],),
+            )
             result = self.cursor.fetchone()
 
             if not result:
@@ -233,30 +254,30 @@ class Database:
                         continue
 
                     # Безопасное извлечение данных с проверками
-                    vacancy_name = vacancy.get('name', 'Не указано')
+                    vacancy_name = vacancy.get("name", "Не указано")
                     if not vacancy_name:
-                        vacancy_name = 'Не указано'
+                        vacancy_name = "Не указано"
 
                     # Обработка зарплаты с проверками
                     salary_from = None
                     salary_to = None
                     currency = None
 
-                    salary_data = vacancy.get('salary')
+                    salary_data = vacancy.get("salary")
                     if salary_data and isinstance(salary_data, dict):
-                        salary_from = salary_data.get('from')
-                        salary_to = salary_data.get('to')
-                        currency = salary_data.get('currency')
+                        salary_from = salary_data.get("from")
+                        salary_to = salary_data.get("to")
+                        currency = salary_data.get("currency")
 
                     # Обработка URL
-                    url = vacancy.get('alternate_url', '')
+                    url = vacancy.get("alternate_url", "")
                     if not url:
-                        url = vacancy.get('url', '')
+                        url = vacancy.get("url", "")
 
                     # Безопасное извлечение snippet данных
-                    snippet = vacancy.get('snippet') or {}
-                    requirement = snippet.get('requirement', '') or ''
-                    responsibility = snippet.get('responsibility', '') or ''
+                    snippet = vacancy.get("snippet") or {}
+                    requirement = snippet.get("requirement", "") or ""
+                    responsibility = snippet.get("responsibility", "") or ""
 
                     # Ограничение длины текстовых полей
                     vacancy_name = str(vacancy_name)[:250]
@@ -264,36 +285,43 @@ class Database:
                     responsibility = str(responsibility)[:1000]
                     url = str(url)[:255]
 
-                    self.cursor.execute("""
+                    self.cursor.execute(
+                        """
                         INSERT INTO vacancies 
                         (employer_id, vacancy_name, salary_from, salary_to, currency, url, requirement, responsibility)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (
-                        employer_id,
-                        vacancy_name,
-                        salary_from,
-                        salary_to,
-                        currency,
-                        url,
-                        requirement,
-                        responsibility
-                    ))
+                    """,
+                        (
+                            employer_id,
+                            vacancy_name,
+                            salary_from,
+                            salary_to,
+                            currency,
+                            url,
+                            requirement,
+                            responsibility,
+                        ),
+                    )
                     added_count += 1
 
                 except Exception as e:
                     error_count += 1
-                    print(f"❌ Ошибка при добавлении вакансии '{vacancy.get('name', 'Unknown')}': {e}")
+                    print(
+                        f"❌ Ошибка при добавлении вакансии '{vacancy.get('name', 'Unknown')}': {e}"
+                    )
                     continue
 
-            print(f"✅ Добавлено {added_count} вакансий для {company['name']} (ошибок: {error_count})")
+            print(
+                f"✅ Добавлено {added_count} вакансий для {company['name']} (ошибок: {error_count})"
+            )
 
             # Задержка для соблюдения лимитов API
             time.sleep(0.3)
 
     def close(self):
         """Закрытие соединения с базой данных"""
-        if hasattr(self, 'cursor'):
+        if hasattr(self, "cursor"):
             self.cursor.close()
-        if hasattr(self, 'conn'):
+        if hasattr(self, "conn"):
             self.conn.close()
         print("✅ Соединение с базой данных закрыто")

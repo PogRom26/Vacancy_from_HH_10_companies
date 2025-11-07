@@ -1,5 +1,5 @@
-from database import Database
-from db_manager import DBManager
+from src.database import Database
+from src.db_manager import DBManager
 
 
 def display_vacancies(vacancies, title):
@@ -91,7 +91,9 @@ def main():
                 keyword = input("\n🔍 Введите ключевое слово для поиска: ").strip()
                 if keyword:
                     vacancies = manager.get_vacancies_with_keyword(keyword)
-                    display_vacancies(vacancies, f"Результаты поиска по слову '{keyword}'")
+                    display_vacancies(
+                        vacancies, f"Результаты поиска по слову '{keyword}'"
+                    )
                 else:
                     print("⚠️ Пожалуйста, введите ключевое слово")
 

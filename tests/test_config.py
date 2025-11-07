@@ -1,11 +1,11 @@
-import pytest
 import os
 import sys
 
-# Явно добавляем путь к src
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../src'))
+from src.config import (COMPANIES, DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT,
+                        DB_USER)
 
-from config import DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, COMPANIES
+# Явно добавляем путь к src
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../src"))
 
 
 class TestConfig:
@@ -33,14 +33,14 @@ class TestConfig:
         assert len(COMPANIES) >= 10
 
         for company in COMPANIES:
-            assert 'id' in company
-            assert 'name' in company
-            assert isinstance(company['id'], int)
-            assert isinstance(company['name'], str)
-            assert company['id'] > 0
-            assert len(company['name']) > 0
+            assert "id" in company
+            assert "name" in company
+            assert isinstance(company["id"], int)
+            assert isinstance(company["name"], str)
+            assert company["id"] > 0
+            assert len(company["name"]) > 0
 
     def test_companies_unique_ids(self):
         """Проверка уникальности ID компаний"""
-        company_ids = [company['id'] for company in COMPANIES]
+        company_ids = [company["id"] for company in COMPANIES]
         assert len(company_ids) == len(set(company_ids))

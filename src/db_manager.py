@@ -1,5 +1,6 @@
 import psycopg2
-from config import DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT
+
+from src.config import DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER
 
 
 class DBManager:
@@ -12,7 +13,7 @@ class DBManager:
                 user=DB_USER,
                 password=DB_PASSWORD,
                 host=DB_HOST,
-                port=DB_PORT
+                port=DB_PORT,
             )
             self.cur = self.conn.cursor()
             print("✅ Успешное подключение к базе данных")
@@ -143,7 +144,7 @@ class DBManager:
                 WHERE LOWER(v.vacancy_name) LIKE LOWER(%s)
                 ORDER BY e.company_name, v.vacancy_name
             """
-            self.cur.execute(query, (f'%{keyword}%',))
+            self.cur.execute(query, (f"%{keyword}%",))
             return self.cur.fetchall()
         except Exception as e:
             print(f"❌ Ошибка при поиске вакансий по ключевому слову: {e}")
@@ -151,8 +152,8 @@ class DBManager:
 
     def close(self):
         """Закрытие соединения с базой данных"""
-        if hasattr(self, 'cur'):
+        if hasattr(self, "cur"):
             self.cur.close()
-        if hasattr(self, 'conn'):
+        if hasattr(self, "conn"):
             self.conn.close()
         print("✅ Соединение с базой данных закрыто")

@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 
 # Загружаем переменные окружения из .env файла
@@ -22,5 +23,5 @@ COMPANIES = [
     {"id": 4934, "name": "Билайн"},
     {"id": 39305, "name": "Газпром нефть"},
     {"id": 64174, "name": "СберТех"},
-    {"id": 2324020, "name": "Ozon"}
+    {"id": 2324020, "name": "Ozon"},
 ]
